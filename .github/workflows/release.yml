@@ -1,7 +1,17 @@
-# Future publish path. This workflow does not run on pull requests and does
-# not publish until a v* tag is pushed *and* npm trusted publishing / OIDC is
-# configured by a maintainer. It is included so the tag/version check is ready;
-# it is not triggered by this initial implementation work.
+# Publish @paperlist/cli to the npm registry when a version tag is pushed.
+# This workflow does not run on main or pull requests.
+#
+# Official trusted publishing (OIDC), no long-lived npm token in GitHub Secrets:
+# https://docs.npmjs.com/trusted-publishers/
+# Requirements: npm CLI >= 11.5.1, Node >= 22.14.0, GitHub-hosted runner only.
+# The npm trusted publisher must match owner paperlist-ai, repo paperlist-cli,
+# and this workflow filename (release.yml only, not a path). Do not set an
+# npm Environment name: this job does not use a GitHub environment.
+# After 2026-09-03, new trusted publishers default to "npm stage publish".
+# This workflow calls `npm publish`, so "Allow npm publish" must be enabled.
+# Provenance is generated automatically for trusted publishing from this
+# public repository; the --provenance flag is not required.
+# A new trusted publisher must complete its first successful publish within 2 days.
 name: Release
 
 on:
@@ -14,27 +24,75 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository_owner != '' && github.event_name == 'push'
+    if: github.repository == 'paperlist-ai/paperlist-cli'
     runs-on: ubuntu-latest
-    environment: release
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Ensure npm CLI supports trusted publishing
+        run: |
+          echo "node $(node --version)"
+          if ! node -e 'const [maj,min]=process.versions.node.split(".").map(Number); process.exit(maj>22||(maj===22&&min>=14)?0:1)'; then
+            echo "Need Node >= 22.14.0, got $(node --version)" >&2
+            exit 1
+          fi
+          npm_ver="$(npm --version)"
+          echo "npm $npm_ver"
+          npm_ok() {
+            node -e 'const [maj,min,pat]=String(process.argv[1]).split(".").map(Number); process.exit((maj>11||(maj===11&&min>5)||(maj===11&&min===5&&(pat||0)>=1))?0:1)' "$1"
+          }
+          if ! npm_ok "$npm_ver"; then
+            echo "npm $npm_ver is older than 11.5.1; upgrading the CLI on this runner"
+            npm install -g npm@^11.5.1
+            npm_ver="$(npm --version)"
+            echo "npm $npm_ver"
+            if ! npm_ok "$npm_ver"; then
+              echo "Need npm >= 11.5.1, got $npm_ver" >&2
+              exit 1
+            fi
+          fi
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - name: Check tag matches package.json version
+      - run: npm run pack:smoke
+      - name: Check tag and version metadata match
         shell: bash
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          version="$(node -p "require('./package.json').version")"
-          if [ "$tag" != "$version" ]; then
-            echo "Tag v$tag does not match package.json version $version" >&2
+          pkg="$(node -p "require('./package.json').version")"
+          src="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; const t = readFileSync("src/version.ts", "utf8"); const m = t.match(/export const VERSION = "([^"]+)";/); if (!m) process.exit(1); process.stdout.write(m[1]);')"
+          if [ "$tag" != "$pkg" ] || [ "$tag" != "$src" ]; then
+            echo "Tag v$tag, package.json $pkg, and src/version.ts $src must all match" >&2
             exit 1
           fi
-      - name: Skip until trusted publisher is configured
-        run: echo "Configure npm trusted publishing (OIDC) before enabling npm publish. This job stops short of publishing."
+          echo "Publishing version $pkg from tag v$tag"
+      - name: Skip if this version is already on the registry
+        id: existing
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          set +e
+          viewed="$(npm view "@paperlist/cli@${version}" version --registry https://registry.npmjs.org/ 2>/tmp/npm-view-err.txt)"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "@paperlist/cli@${version} is already on the registry ($viewed); skipping publish"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -qE 'E404|404 Not Found' /tmp/npm-view-err.txt; then
+            echo "@paperlist/cli@${version} is not on the registry yet"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "npm view failed unexpectedly:" >&2
+          cat /tmp/npm-view-err.txt >&2
+          exit 1
+      - name: Publish to npm
+        if: steps.existing.outputs.skip != 'true'
+        run: npm publish --access public

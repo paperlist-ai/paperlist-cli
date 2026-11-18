@@ -95,6 +95,35 @@ npm run build
 
 Tests use a local fixture MCP server. They do not need a production API key and they do not touch your real Paperlist config directory (they isolate `HOME` / `XDG_CONFIG_HOME`). Optional live checks against `https://paperlist.ai/mcp` are anonymous `conferences` plus the auth boundary for `search`; protected live searches run only when `PAPERLIST_API_KEY` is already set in the environment.
 
+
+## Releasing
+
+Publishes go to npm only from a version tag (`v*`), not from ordinary pushes to `main`. The Release workflow uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC). It does not read an `NPM_TOKEN` GitHub secret.
+
+### Trusted publishing prerequisites
+
+Configure a GitHub Actions trusted publisher for `@paperlist/cli` on npm before the first tag-based publish (and complete that first publish within 2 days of creating the configuration):
+
+- Organization or user: `paperlist-ai`
+- Repository: `paperlist-cli`
+- Workflow filename: `release.yml` (filename only, including the extension; case-sensitive)
+- Environment name: leave empty (the workflow does not use a GitHub Environment)
+- Allowed actions: enable **Allow npm publish**. Configurations created after 2026-09-03 default to `npm stage publish` only; this workflow calls `npm publish`.
+
+Package settings: open [https://www.npmjs.com/package/@paperlist/cli](https://www.npmjs.com/package/@paperlist/cli) → **Settings** → **Trusted publishing**. The official CLI equivalent is `npm trust github` (npm `11.15.0+`, write access, account 2FA; granular tokens with bypass-2FA are not supported).
+
+The publish job runs on `ubuntu-latest` (GitHub-hosted runners only; self-hosted is not supported), with Node 24 (npm needs `>= 11.5.1`, Node `>= 22.14.0`) and `permissions: id-token: write` plus `contents: read`. From this public repository, trusted publishing generates provenance automatically; `--provenance` is not required. Do not store a long-lived npm token in GitHub Secrets for this path.
+
+### Publish a new version
+
+1. Set the same version in `package.json` and `src/version.ts`.
+2. Commit that change to `main`.
+3. Tag the release commit `vX.Y.Z` (the `v` prefix, then the exact version) and push the tag, for example `git tag v0.1.1` and `git push origin v0.1.1`.
+4. The Release workflow runs lint, typecheck, tests, and pack smoke. If the tag, `package.json`, and `src/version.ts` disagree, it fails. If that version is already on the registry, it skips publish instead of publishing again. Otherwise it runs `npm publish --access public`.
+
+Do not create a GitHub Release to publish; the workflow is triggered by the tag push itself.
+
+
 ## License
 
 MIT, Copyright (c) 2026 PaperList.
