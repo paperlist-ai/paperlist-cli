@@ -1,0 +1,40 @@
+# Future publish path. This workflow does not run on pull requests and does
+# not publish until a v* tag is pushed *and* npm trusted publishing / OIDC is
+# configured by a maintainer. It is included so the tag/version check is ready;
+# it is not triggered by this initial implementation work.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.repository_owner != '' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Check tag matches package.json version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "Tag v$tag does not match package.json version $version" >&2
+            exit 1
+          fi
+      - name: Skip until trusted publisher is configured
+        run: echo "Configure npm trusted publishing (OIDC) before enabling npm publish. This job stops short of publishing."

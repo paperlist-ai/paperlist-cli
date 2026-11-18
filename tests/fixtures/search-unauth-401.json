@@ -1,0 +1,14 @@
+{
+  "source": "https://paperlist.ai/mcp tools/call search_papers without Authorization",
+  "fetched_at": "2026-11-18T13:18:55Z",
+  "http_status": 401,
+  "www_authenticate": "Bearer error=\"invalid_request\", error_description=\"Authentication required. Sign in or send an API key to call this tool.\", resource_metadata=\"https://paperlist.ai/.well-known/oauth-protected-resource/mcp\", scope=\"papers:read\"",
+  "body": {
+    "jsonrpc": "2.0",
+    "error": {
+      "code": -32001,
+      "message": "Sign-in required. Sign in at https://paperlist.ai/en/features/paper-search-mcp, or send 'Authorization: Bearer pl_...' with an API key from https://paperlist.ai/en/dashboard/settings?tab=keys."
+    },
+    "id": null
+  }
+}

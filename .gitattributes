@@ -1,0 +1,2 @@
+# Checkout and commit text files as LF on every OS (Windows runners included).
+* text=auto eol=lf
