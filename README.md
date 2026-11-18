@@ -2,6 +2,8 @@
 
 Command-line client for the hosted [Paperlist](https://paperlist.ai) MCP server at `https://paperlist.ai/mcp`. It searches and reads AI conference papers through the official Model Context Protocol SDK (Streamable HTTP). It does not run a local paper index and does not add a private REST API.
 
+Docs: [https://paperlist.ai/en/cli](https://paperlist.ai/en/cli) ([中文](https://paperlist.ai/zh/cli)). Source is in this repository; issues go to [GitHub Issues](https://github.com/paperlist-ai/paperlist-cli/issues). The open-source project is the client only — not the paper database or the Paperlist backend.
+
 The published npm package is `@paperlist/cli`. The command it installs is `paperlist`.
 
 ## Install

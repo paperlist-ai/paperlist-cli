@@ -26,9 +26,9 @@
     "prepack": "npm run build",
     "pack:smoke": "node scripts/pack-smoke.mjs"
   },
-  "homepage": "https://paperlist.ai",
+  "homepage": "https://paperlist.ai/en/cli",
   "bugs": {
-    "url": "https://paperlist.ai"
+    "url": "https://github.com/paperlist-ai/paperlist-cli/issues"
   },
   "repository": {
     "type": "git",
