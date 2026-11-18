@@ -44,7 +44,7 @@ test("help and version", async () => {
   expect(help.stdout).toContain("search");
   const version = await runCli(["--version"], env());
   expect(version.code).toBe(0);
-  expect(version.stdout.trim()).toBe("0.1.0");
+  expect(version.stdout.trim()).toBe("0.1.1");
 });
 
 test("anonymous conferences", async () => {

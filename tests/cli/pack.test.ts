@@ -22,7 +22,7 @@ describe("pack helpers", () => {
   test("selectPackedTarball uses the destination directory, not npm pack stdout", () => {
     const staging = mkdtempSync(path.join(tmpdir(), "pl-pack-name-"));
     try {
-      const realName = "paperlist-cli-0.1.0.tgz";
+      const realName = "paperlist-cli-0.1.1.tgz";
       const fakeStdout = [
         "CLI Building entry: src/cli.ts",
         "ESM dist/cli.js     55.12 KB",

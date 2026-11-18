@@ -126,7 +126,7 @@ function runBin(tarball) {
     const cli = path.join(installDir, "node_modules", "@paperlist", "cli", "dist", "cli.js");
     const version = execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" }).trim();
     const help = execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" });
-    if (version !== "0.1.0") throw new Error(`unexpected version: ${version}`);
+    if (version !== "0.1.1") throw new Error(`unexpected version: ${version}`);
     if (!help.includes("conferences")) throw new Error("help output missing conferences");
     process.stdout.write(`pack-smoke ok version=${version} tarball=${path.basename(tarball)}\n`);
   } finally {
